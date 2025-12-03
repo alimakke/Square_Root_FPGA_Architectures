@@ -1,0 +1,97 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity arch3 is
+  generic(N: NATURAL := 64);
+  port(
+    A: in std_logic_vector(N-1 downto 0);
+    start: in std_logic;
+    init: in std_logic;
+    clk: in std_logic;
+    result: out std_logic_vector(N/2 - 1 downto 0);
+    done: out std_logic
+  );
+end arch3;
+
+architecture archi3 of arch3 is
+  signal v : unsigned(N-1 downto 0);
+  signal z : unsigned(N - 1 downto 0):= (others => '0');
+  signal RR : unsigned(N/2 - 1 downto 0);
+  signal AA: unsigned(N-1 downto 0) := (others => '0');
+  type statetype is (s0, s1, s2, s3);
+  signal state : statetype := s0;
+  signal i : integer range -1 to N/2 := 0; 
+begin
+  
+  process(clk, init)
+    variable tempX : unsigned(63 downto 0);
+    variable tempY : unsigned(63 downto 0);
+    variable tempZ : unsigned(63 downto 0);
+  begin
+    if init = '1' then
+      v <= (others => '0');
+      z <= (others => '0');
+      RR <= (others => '0');
+      done <= '0';
+      i <= 0;
+      state <= s0;
+
+    elsif rising_edge(clk) then
+      case state is
+        when s0 =>
+          done <= '0';
+          if start = '1' then
+            AA <= unsigned(A);
+            v <= shift_left(to_unsigned(1, N), N-2);
+            z <= (others => '0');
+            i <= N/2 - 1;
+            state <= s1;
+          end if;
+
+        when s1 =>
+          if i >= 0 then
+            i <= i - 1;
+            tempX:= z + v;
+           
+            if AA >= tempX then
+              AA <= AA - tempX;
+              tempY:= tempX + v;
+            else
+             tempY:= tempX - v;
+            end if;
+            v <= shift_right(v,2);
+            z <= shift_right(tempY,1);
+          else
+            state <= s2;
+          end if;
+
+        when s2 =>
+          RR <= resize(z,32);
+          done <= '1';
+          state <= s0;
+
+        when others =>
+          state <= s0;
+          done <= '0';
+      end case;
+    end if;
+  end process;
+
+  result <= std_logic_vector(RR);
+end archi3;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

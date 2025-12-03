@@ -1,0 +1,138 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+architecture test_multi_arch of sqrt_seq is  
+  constant sigN : natural := 64;
+
+  -- Séquentiel
+  signal sigA_seq       : std_logic_vector(sigN-1 downto 0);
+  signal sigdone_seq    : std_logic := '0';
+  signal sigresult_seq  : std_logic_vector(sigN/2-1 downto 0);
+
+  -- Combinatoire
+  signal sigA_comb      : std_logic_vector(sigN-1 downto 0);
+  signal sigresult_comb : std_logic_vector(sigN/2-1 downto 0);
+
+  -- Pipeline
+  signal sigA_pipe      : std_logic_vector(sigN-1 downto 0);
+  signal sigdone_pipe   : std_logic := '0';
+  signal sigresult_pipe : std_logic_vector(sigN/2-1 downto 0);
+  signal sigstart_pipe : std_logic := '0';
+
+  -- Signaux communs
+  signal sigclk   : std_logic := '0';
+  signal siginit  : std_logic := '0';
+  signal sigstart : std_logic := '0';
+
+begin
+
+  -------------------------------------------------------------------
+  -- Instanciations
+  -------------------------------------------------------------------
+
+  ARC1: entity work.sqrt_seq(rtb)
+    generic map (N => sigN)
+    port map (
+      clk    => sigclk,
+      init   => siginit,
+      start  => sigstart,
+      A      => sigA_seq,
+      done   => sigdone_seq,
+      result => sigresult_seq
+    );
+
+  ARC2: entity work.sqrt_comb(arch4)
+    generic map (N => sigN)
+    port map (
+      A      => sigA_comb,
+      result => sigresult_comb
+    );
+    
+  ARC3: entity work.sqrt_pip(arch5)
+    generic map (N => sigN)
+    port map (
+      clk    => sigclk,
+        init    => siginit,
+      start  => sigstart_pipe,
+      A      => sigA_pipe,
+      done   => sigdone_pipe,
+      result => sigresult_pipe
+    );
+
+  -------------------------------------------------------------------
+  -- Génération du reset
+  -------------------------------------------------------------------
+  siginit <= '1', '0' after 20 ns;
+
+  -------------------------------------------------------------------
+  -- Process 1 : TEST SÉQUENTIEL
+  -------------------------------------------------------------------
+  PA_SEQ : process
+  begin
+    wait for 30 ns; -- après reset
+    sigA_seq <= std_logic_vector(to_unsigned(25, sigN));
+    sigstart <= '1', '0' after 10 ns;
+    wait until sigdone_seq = '1';
+
+    sigA_seq <= std_logic_vector(to_unsigned(512, sigN));
+    sigstart <= '1', '0' after 10 ns;
+    wait until sigdone_seq = '1';
+
+    sigA_seq <= x"00000000FFFFFFFF";
+    sigstart <= '1', '0' after 10 ns;
+    wait until sigdone_seq = '1';
+
+    sigA_seq <= x"0000000100580790";
+    sigstart <= '1', '0' after 10 ns;
+    wait until sigdone_seq = '1';
+
+    wait;
+  end process;
+
+  -------------------------------------------------------------------
+  -- Process 2 : TEST COMBINATOIRE
+  -------------------------------------------------------------------
+  PA_COMB : process
+  begin
+    wait for 30 ns;
+    sigA_comb <= std_logic_vector(to_unsigned(25, sigN)); wait for 10 ns;
+    sigA_comb <= std_logic_vector(to_unsigned(512, sigN)); wait for 10 ns;
+    sigA_comb <= x"00000000FFFFFFFF"; wait for 10 ns;
+    sigA_comb <= x"0000000100580790"; wait for 10 ns;
+    wait;
+  end process;
+
+  -------------------------------------------------------------------
+  -- Process 3 : TEST PIPELINE (type PB)
+  -------------------------------------------------------------------
+  PA_PIP : process
+  begin
+    wait for 30 ns;  -- après reset
+    for i in 0 to 8 loop
+      sigA_pipe <= std_logic_vector(to_unsigned(i * 100, sigN));
+      sigstart_pipe  <= '1';
+      wait for 20 ns;
+    end loop;
+
+    wait;
+  end process;
+
+
+  Pclk : process
+    constant nb_periods : natural := 500;
+  begin
+    sigclk <= '0';
+    wait for 10 ns;
+    for i in 1 to nb_periods loop
+      sigclk <= '1';
+      wait for 10 ns;
+      sigclk <= '0';
+      wait for 10 ns;
+    end loop;
+    wait;
+  end process;
+
+ 
+
+end architecture test_multi_arch;

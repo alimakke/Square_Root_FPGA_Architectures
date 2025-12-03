@@ -1,0 +1,112 @@
+#include <stdio.h>
+
+unsigned int *timer_status = ;
+unsigned int *timer_control = ;
+unsigned int *timer_periodl = ;
+unsigned int *timer_periodh = ;
+unsigned int *timer_snapl = ;
+unsigned int *timer_snaph = ;
+
+
+//****************************************************************************
+//  FONCTION DE MESURE DE TEMPS
+unsigned int timer_period;
+
+void start_timer()
+{
+	*timer_control = 0x00000006;
+}
+
+unsigned int get_timer_period ()
+{
+	return ((((*timer_periodh)<<16))+(*timer_periodl));
+}
+
+unsigned int get_timer_value ()
+{
+	*timer_snapl = 0;
+	return (((*timer_snaph)<<16)+(*timer_snapl));
+}
+
+unsigned int compute_time_interval(unsigned int v1, unsigned int v2)
+{
+	unsigned int time_interval;
+	if (v1>=v2)
+	{
+		time_interval = v1-v2;
+	}
+	else
+	{
+		time_interval = v1 + timer_period - v2;
+	}
+	return time_interval;
+}
+//---------------------------------------------------------------------------------
+
+/************************************************/
+/*       Calcul racine carrée					*/
+unsigned int  sqrt1(unsigned int Xio){
+	
+}
+
+unsigned int  sqrt2(unsigned int Xio){
+	
+}
+
+unsigned int  sqrt3(unsigned int Xio){
+	
+}
+
+
+int main()
+{ 
+	unsigned int first_value, second_value, res, computation_time;
+	unsigned short k;
+  
+	timer_period = get_timer_period();
+
+  	printf("Initialisation terminée\n");
+
+	start_timer();
+	
+	computation_time = 0;
+
+	for (k=0; k<1000; k++)
+	{
+		first_value = get_timer_value();
+		res=sqrt1(2550409);
+		second_value = get_timer_value();
+		computation_time = computation_time + compute_time_interval(first_value,second_value);
+	}
+	
+
+	printf("res: %u, durée sqrt1: %u\n",res,computation_time/1000);
+	
+	computation_time = 0;
+
+	for (k=0; k<1000; k++)
+	{
+		first_value = get_timer_value();
+		res=sqrt2(2550409);
+		second_value = get_timer_value();
+		computation_time = computation_time + compute_time_interval(first_value,second_value);
+	}
+	
+
+	printf("res: %u, durée sqrt2: %u\n",res,computation_time/1000);
+	
+	computation_time = 0;
+
+	for (k=0; k<1000; k++)
+	{
+		first_value = get_timer_value();
+		res=sqrt3(2550409);
+		second_value = get_timer_value();
+		computation_time = computation_time + compute_time_interval(first_value,second_value);
+	}
+	
+
+	printf("res: %u, durée sqrt3: %u\n",res,computation_time/1000);
+	
+  return 0;
+}

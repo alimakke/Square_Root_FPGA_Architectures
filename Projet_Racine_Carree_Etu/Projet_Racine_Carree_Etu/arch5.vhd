@@ -1,0 +1,79 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity arch5 is
+  generic (N : natural := 64);
+  port (
+    clk    : in  std_logic;
+    init    : in  std_logic;
+    start  : in  std_logic;
+    A      : in  std_logic_vector(N-1 downto 0);
+    result : out std_logic_vector(N/2 - 1 downto 0);
+    done   : out std_logic
+  );
+end entity;
+
+architecture archi5 of arch5 is
+
+  -- Nombre d?�tages = N/2 (une it�ration par �tage)
+  constant STAGES : integer := N/2;
+
+  -- Les registres pipeline pour chaque �tape
+  type pipe_array is array (0 to STAGES) of unsigned(N-1 downto 0);
+  signal AA_pipe, Z_pipe, V_pipe : pipe_array;
+
+  signal valid : std_logic_vector(STAGES downto 0);
+
+begin
+
+  process(clk, init)
+    variable tempX, tempY : unsigned(N-1 downto 0);
+  begin
+    if init = '1' then
+      AA_pipe <= (others => (others => '0'));
+      Z_pipe  <= (others => (others => '0'));
+      V_pipe  <= (others => (others => '0'));
+      valid   <= (others => '0');
+    elsif rising_edge(clk) then
+
+      -- �tape 0 : initialisation
+      if start = '1' then
+        AA_pipe(0) <= unsigned(A);
+        Z_pipe(0)  <= (others => '0');
+        V_pipe(0)  <= shift_left(to_unsigned(1, N), N-2);
+        valid(0)   <= '1';
+      else
+        valid(0) <= '0';
+      end if;
+
+      -- Pipeline
+      for i in 0 to STAGES-1 loop
+        if valid(i) = '1' then
+          -- Une it�ration du calcul
+          
+          tempX := Z_pipe(i) + V_pipe(i);
+
+          if AA_pipe(i) >= tempX then
+            AA_pipe(i+1) <= AA_pipe(i) - tempX;
+            tempY := tempX + V_pipe(i);
+          else
+            tempY := tempX - V_pipe(i);
+            AA_pipe(i+1) <= AA_pipe(i);
+          end if;
+
+          V_pipe(i+1) <= shift_right(V_pipe(i), 2);
+          Z_pipe(i+1) <= shift_right(tempY, 1);
+          valid(i+1)  <= '1';
+        else
+          valid(i+1) <= '0';
+        end if;
+      end loop;
+    end if;
+  end process;
+
+  -- Sortie
+  result <= std_logic_vector(resize(Z_pipe(STAGES), N/2));
+  done   <= valid(STAGES);
+
+end archi5;

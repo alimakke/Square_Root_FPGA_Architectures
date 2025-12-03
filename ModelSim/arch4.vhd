@@ -1,0 +1,42 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity sqrt_comb is
+  generic(N: NATURAL := 64);
+  port(
+    A: in std_logic_vector(N-1 downto 0);
+    result: out std_logic_vector(N/2 - 1 downto 0)
+  );
+end sqrt_comb;
+
+architecture arch4 of sqrt_comb is
+begin
+  process(A)
+    variable AA : unsigned(N-1 downto 0);
+    variable v  : unsigned(N-1 downto 0);
+    variable z  : unsigned(N-1 downto 0);
+    variable tempX : unsigned(N-1 downto 0);
+    variable tempY : unsigned(N-1 downto 0);
+    variable i : integer;
+  begin
+    AA := unsigned(A);
+    z  := (others => '0');
+    v  := shift_left(to_unsigned(1, N), N-2);
+
+    
+    for i in 0 to N/2 - 1 loop
+      tempX := z + v;
+      if AA >= tempX then
+        AA := AA - tempX;
+        tempY := tempX + v;
+      else
+        tempY := tempX - v;
+      end if;
+      v := shift_right(v,2);
+      z := shift_right(tempY,1);
+    end loop;
+
+    result <= std_logic_vector(resize(z, N/2));
+  end process;
+end arch4;
